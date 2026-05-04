@@ -38,6 +38,7 @@ juce_generate_juce_header(${BaseTargetName})
 target_sources(${BaseTargetName} PRIVATE
         Source/PluginProcessor.cpp
         Source/Stft.cpp
+        Source/PeakAnalyzer.cpp
         )
 
 target_compile_definitions(${BaseTargetName}

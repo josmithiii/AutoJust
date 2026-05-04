@@ -1,31 +1,32 @@
 # AutoJust unit tests — standalone console executables.
-# Currently just the STFT round-trip test (v0.2).
 
-juce_add_console_app(AutoJust_StftTest
-    PRODUCT_NAME "AutoJust_StftTest")
+function(autojust_add_test_target name source)
+    juce_add_console_app(${name} PRODUCT_NAME "${name}")
+    juce_generate_juce_header(${name})
+    target_sources(${name} PRIVATE ${source} ${ARGN})
+    target_include_directories(${name} PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/../Source)
+    target_compile_definitions(${name} PRIVATE
+        JUCE_USE_CURL=0
+        JUCE_WEB_BROWSER=0
+        JUCE_STANDALONE_APPLICATION=1)
+    target_compile_options(${name} PRIVATE
+        $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-fno-strict-aliasing>)
+    target_link_libraries(${name} PRIVATE
+        juce_audio_basics
+        juce_dsp
+        juce_core
+        juce_recommended_warning_flags
+        juce_recommended_config_flags
+        juce_recommended_lto_flags
+        jos_warning_flags)
+endfunction()
 
-juce_generate_juce_header(AutoJust_StftTest)
-
-target_sources(AutoJust_StftTest PRIVATE
+autojust_add_test_target(AutoJust_StftTest
     StftRoundTripTest.cpp
     ../Source/Stft.cpp)
 
-target_include_directories(AutoJust_StftTest PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/../Source)
-
-target_compile_definitions(AutoJust_StftTest PRIVATE
-    JUCE_USE_CURL=0
-    JUCE_WEB_BROWSER=0
-    JUCE_STANDALONE_APPLICATION=1)
-
-target_compile_options(AutoJust_StftTest PRIVATE
-    $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-fno-strict-aliasing>)
-
-target_link_libraries(AutoJust_StftTest PRIVATE
-    juce_audio_basics
-    juce_dsp
-    juce_core
-    juce_recommended_warning_flags
-    juce_recommended_config_flags
-    juce_recommended_lto_flags
-    jos_warning_flags)
+autojust_add_test_target(AutoJust_PeakAnalyzerTest
+    PeakAnalyzerTest.cpp
+    ../Source/Stft.cpp
+    ../Source/PeakAnalyzer.cpp)

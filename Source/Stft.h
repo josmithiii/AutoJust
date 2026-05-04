@@ -40,8 +40,10 @@ public:
 
 protected:
     /** Override to modify the spectrum in-place before resynthesis.
-        Default implementation is identity. */
-    virtual void processSpectrum (float* /*data*/, int /*fftSize*/) {}
+        Default implementation is identity. `channel` identifies which
+        audio channel the frame belongs to so subclasses can keep per-channel
+        state (e.g. previous-frame phases for IF estimation). */
+    virtual void processSpectrum (float* /*data*/, int /*fftSize*/, int /*channel*/) {}
 
 private:
     void runFrame (int channel);

@@ -12,8 +12,8 @@ See [`AutoJust_PLAN.md`](AutoJust_PLAN.md) for the design (signal flow, tuning-g
 |---|---|---|
 | v0.1 | Plugin scaffold — Standalone + AU + VST3, PGM GUI, stub params | done |
 | v0.2 | Streaming STFT identity round-trip + unit test | done |
-| v0.3 | Peak picker + IF estimation + diagnostics | next |
-| v0.4 | Tonic estimator (histogram + LPF + drift) | |
+| v0.3 | Peak picker + IF estimation + diagnostics | done |
+| v0.4 | Tonic estimator (histogram + LPF + drift) | next |
 | v1   | Per-peak soft-attractor onto 5-limit JI grid | |
 | v2   | Harmonic grouping + multiple grid types | |
 | v3   | Scala loader, MIDI key hint, scope/visualization | |
@@ -44,14 +44,15 @@ Universal binary (x86_64 + arm64), like the rest of jos-juce-plugins.
 
 ## Tests
 
-STFT round-trip test:
-
 ```sh
+# STFT round-trip (reconstruction error ≤ 6e-7 over sine/sweep/noise/impulse/DC)
 cmake --build build/release --target AutoJust_StftTest --parallel
 ./build/release/Effects/AutoJust/tests/AutoJust_StftTest_artefacts/Release/AutoJust_StftTest
-```
 
-Pushes sine, sweep, white noise, impulse, and DC through the STFT and verifies reconstruction error is at float-machine epsilon (peak ≤ 6e-7) after latency alignment.
+# Peak picker + IF estimation (pure tones detected to ≤ 0.001 cents)
+cmake --build build/release --target AutoJust_PeakAnalyzerTest --parallel
+./build/release/Effects/AutoJust/tests/AutoJust_PeakAnalyzerTest_artefacts/Release/AutoJust_PeakAnalyzerTest
+```
 
 ## Layout
 
@@ -61,13 +62,15 @@ Effects/AutoJust/
   README.md               this file
   CMakeLists.txt          JUCE plugin target (Standalone + AU + VST3)
   Source/
-    PluginProcessor.{h,cpp}   foleys::MagicProcessor — params + STFT wiring
+    PluginProcessor.{h,cpp}   foleys::MagicProcessor — params + analyzer wiring
     Stft.{h,cpp}              streaming Hann² OLA, default identity
+    PeakAnalyzer.{h,cpp}      Stft subclass: peak pick + IF, exposes snapshot
   Resources/
     Layouts/AutoJust.xml      PGM GUI XML
   tests/
-    CMakeLists.txt            AutoJust_StftTest console target
+    CMakeLists.txt            AutoJust_{Stft,PeakAnalyzer}Test console targets
     StftRoundTripTest.cpp     reconstruction error test
+    PeakAnalyzerTest.cpp      IF-correction accuracy test
   docs/
     patents/                  reference material
 ```

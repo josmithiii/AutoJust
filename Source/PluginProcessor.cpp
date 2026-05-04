@@ -28,15 +28,15 @@ AutoJustAudioProcessor::createParameterLayout()
     return layout;
 }
 
-void AutoJustAudioProcessor::prepareToPlay (double /*sampleRate*/, int samplesPerBlock)
+void AutoJustAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    stft.prepare (juce::jmax (1, getTotalNumOutputChannels()), samplesPerBlock);
-    setLatencySamples (stft.getLatencySamples());
+    analyzer.prepare (sampleRate, juce::jmax (1, getTotalNumOutputChannels()), samplesPerBlock);
+    setLatencySamples (analyzer.getLatencySamples());
 }
 
 void AutoJustAudioProcessor::releaseResources()
 {
-    stft.reset();
+    analyzer.reset();
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -58,10 +58,12 @@ void AutoJustAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     for (int ch = totalIn; ch < totalOut; ++ch)
         buffer.clear (ch, 0, buffer.getNumSamples());
 
-    // v0.2: STFT round-trip with identity spectrum modification.
-    // v1 will subclass Stft and override processSpectrum() to retune peaks.
+    // v0.3: STFT round-trip + per-frame peak picking with IF correction.
+    // Audio is still identity (PeakAnalyzer's processSpectrum doesn't modify
+    // the spectrum); resolved peaks are exposed via analyzer.getResolvedPeaks()
+    // for diagnostics/GUI. v1 will modify the spectrum to retune those peaks.
     juce::ignoreUnused (bypassParam, snapStrength);
-    stft.process (buffer);
+    analyzer.process (buffer);
 }
 
 void AutoJustAudioProcessor::initialiseBuilder (foleys::MagicGUIBuilder& builder)

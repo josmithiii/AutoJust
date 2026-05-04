@@ -82,7 +82,7 @@ void Stft::runFrame (int channel)
     std::fill (work + fftSize, work + 2 * fftSize, 0.0f);
 
     fft.performRealOnlyForwardTransform (work);
-    processSpectrum (work, fftSize);
+    processSpectrum (work, fftSize, channel);
     fft.performRealOnlyInverseTransform (work);
 
     // OLA-add windowed inverse into outputRing[writePos..writePos+N).
