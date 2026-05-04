@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<magic>
+  <Styles>
+    <Style name="default">
+      <Nodes/>
+      <Classes>
+        <plot-view border="2" background-color="black" border-color="silver"
+                   display="contents"/>
+        <nomargin margin="0" padding="0" border="0"/>
+        <group margin="5" padding="5" border="2" flex-direction="column"/>
+      </Classes>
+      <Types>
+        <Slider slider-textbox="textbox-below"/>
+        <ToggleButton button-on-color="orange" caption-size="0"/>
+        <Label label-background="transparent" justification="centred"
+               label-font-size="20"/>
+      </Types>
+      <Palettes>
+        <default background="darkgrey" foreground="white" outline="silver"
+                 text="white" inactive="grey"/>
+      </Palettes>
+    </Style>
+  </Styles>
+  <View id="root" resizable="1" resize-corner="1" flex-direction="column"
+        padding="8" background-color="0xff202020">
+    <Label text="AutoJust" min-height="40" max-height="48" label-font-size="28" text-color="white"/>
+    <Label text="adaptive Just Intonation — v0 scaffold (passthrough)"
+           min-height="22" max-height="28" label-font-size="13" text-color="0xffaaaaaa"/>
+    <View flex-direction="row" padding="8">
+      <Slider caption="Snap Strength" parameter="snapStrength" slider-type="linear-horizontal"/>
+      <ToggleButton caption="Bypass" parameter="bypass" max-width="120"/>
+    </View>
+  </View>
+</magic>
