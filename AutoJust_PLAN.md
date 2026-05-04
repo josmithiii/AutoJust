@@ -143,18 +143,88 @@ Tonic estimator stays the same across grids — only the snap targets change.
 ### v1 — minimal viable retuner
 - [x] **v1a Single-peak retune (math sanity)** (done 2026-05-04). `Source/Retuner.{h,cpp}` extends `PeakAnalyzer`, overrides `onPeaksDetected` (new hook in `PeakAnalyzer` — old `processSpectrum` refactored into `detectAndCorrectPeaks` + hook). Strongest peak only, fixed test cents shift (no JI grid yet). Method: per-channel accumulator α += 2π·Δf·H/fs each hop; multiply every bin in the peak's region of influence by exp(jα). Because α is constant across the region within a frame and varies linearly across frames, OLA reconstructs an output multiplied by exp(j·2π·Δf·t) — i.e. shifted by Δf Hz. Identity phase locking (same phasor for all bins in region) preserves intra-region phase relations per Laroche–Dolson 1999 §V-C-1. `tests/RetunerTest.cpp`: ±5/20/30/50 cents shifts at 220/440/880/1000 Hz all reproduce target frequency at 0.000 cents error; disabled mode is bit-identical. Plugin holds a `Retuner` (default `enabled=false`) so default behavior is unchanged from v0.4.
 - [x] **v1b All-peaks retune onto 5-limit JI grid** (done 2026-05-04). New `Source/TuningGrid.{h,cpp}` adds an abstract grid interface and `JustGrid5Limit` (12 standard 5-limit ratios as cents-mod-octave). `Retuner` extended: when `testShiftCents == 0`, every detected peak gets its own soft attractor toward the nearest grid point, anchored to `getTonicEstimator().getTonicCents()`. Pull strength scaled by `snapStrength` ([0..1], 0 = identity). Peaks farther than `maxBasinCents` (default 50) from the nearest grid point pass through unchanged. Region-of-influence carved at neighbor midpoints (capped by `regionHalfWidth`). Per-bin phase accumulators give frame-to-frame phase coherence. Plugin's `bypass` and `snapStrength` parameters now wired: `bypass=false → setEnabled(true)`, `snapStrength → setSnapStrength`. Tests: `tests/TuningGridTest.cpp` (10/10) verifies grid math including ET-→-JI deltas at known intervals (m3 → −13.69 cents, P5 → +1.96 cents, etc.) and circular wrap. `tests/RetunerJITest.cpp` (3/3) feeds a sustained ET dyad (C5 + ET-E5) through the Retuner with `snapStrength=1`: tonic settles to C pitch class (300.00 cents from A); the C peak is unchanged; the E peak shifts from 659.26 Hz (ET) to 654.07 Hz (JI 5/4) at 0.004 cents accuracy; with `snapStrength=0` the E stays at ET to within 0.004 cents.
-- Test material: sustained string-quartet pad, organ chord progressions.
+- [x] **v1c GUI fine-tune controls + diagnostics** (done 2026-05-04). Test Chord toggle injects a sustained ET C-major triad (C4 + E4 + G4 sines, C voiced louder for tonic disambiguation) so users can A/B the snap effect without sourcing audio. Live "Tonic: …" label updated 25 Hz from a juce::Timer + custom PGM `TonicLabel` factory. stdout prints when the tonic moves >5 cents — exposed the "auto-tonic is occasionally random" failure mode (FP tie-break in argmax across equal pitch-class peaks). Fix: bass-bias the histogram by `(refFreqHz / freq)^k` (default k=1 → 1/f), making bass voices dominate; default drift cap raised 10 → 60 c/s for snappier settling. New params + widgets: `tonicLock` (bool toggle), `tonicPitch` (12-choice ComboBox), `driftRate` (5..200 c/s slider), `bassBias` (0..3 slider). `TonicEstimator::setLock(bool, cents)` short-circuits the histogram entirely when locked.
+- Listening test (2026-05-04): C-major test chord with snap engaged → "perfect and sublime"; ET → JI lock crisp and artifact-free; no phasing, smearing, or tonal coloration. Audio path of v1 considered complete and shippable for harmonic-spectrum content.
 
-### v2 — harmonic grouping + multiple grids
-- Group shifts (preserves inharmonicity).
-- TuningGrid abstraction + ≥ 3 grid types.
-- Anchored mode.
+### v2 — harmonic grouping + multiple grids (NEXT)
+
+The v1 retuner treats every spectral peak independently. That works perfectly for sines and pure-harmonic timbres but will subtly *flatten* the natural inharmonicity of real strings and plucked instruments by snapping each partial to a strict-octave grid point. v2 fixes this and adds tuning-grid choice.
+
+#### v2a — Harmonic grouping (top priority)
+- New `Source/HarmonicGrouper.{h,cpp}`: greedy from highest-magnitude unassigned peak, scan for sub-harmonic candidates (within tolerance), then build the harmonic stack at integer multiples (with relaxed tolerance for inharmonicity ~B·n²·f₀ where B ≈ 10⁻⁴ for piano, less for strings).
+- `Retuner` consumes groups instead of bare peaks: ONE Δf is computed for each group's f₀, then applied identically (in cents) to all members. Group region-of-influence is the union of member regions (with carving against other groups' midpoints).
+- The per-bin phase accumulator pattern still works (each member peak has its own bin). Important: all members share the same Δ_cents, but the absolute Δf per partial is `f_partial · (2^(Δ/1200) - 1)` — partials differ in their per-hop phase increment. Verify this preserves inharmonicity correctly via test signal.
+- Test material: synthesize a single piano-like spectrum (f₀ + harmonics with B·n² stretching) at a slightly off-key f₀; verify (a) all partials shift by the same cents amount toward the JI grid, (b) the inharmonicity (B coefficient) is preserved end-to-end. Listening test on real solo piano / acoustic guitar.
+
+#### v2b — Tuning grid selector
+- Add `Source/PythagoreanGrid.{h,cpp}` (3-limit), `Source/JustGrid7Limit.{h,cpp}` (adds 7/4, 7/5, etc.), `Source/EqualTemperament.{h,cpp}` (12-TET — identity / sanity). Maybe `Source/QuarterCommaMeantone.{h,cpp}`.
+- Plugin parameter `tuningGrid` (Choice): "5-limit Just" / "7-limit Just" / "Pythagorean" / "Quarter-comma Meantone" / "12-TET (off)". Wired via `Retuner::setTuningGrid(std::unique_ptr<TuningGrid>)`.
+- Test: synthesize tones at known cents-mod-octave; verify each grid snaps them to the grid's known ratios.
+
+#### v2c — Anchored mode polish
+- Already partially done in v1c (Tonic Lock toggle + Tonic Pitch chooser).
+- v2 polish: on lock-engage, optionally provide a brief crossfade from current auto-detected tonic to locked tonic (avoid the discontinuity you'd hear if the auto value was far off).
+
+### Open questions / things to remember for v2
+1. **Does inharmonicity flattening on solo piano actually sound bad?** Per-peak v1 snap may already be acceptable on most material. Test before assuming v2a is necessary.
+2. **Bass bias appropriate per genre?** Default `bassBiasExp = 1.0` works for the test chord but may over-weight bass on bass-led EDM or under-weight on choir/soprano-led material. Consider exposing a "Tonic source" preset dropdown (e.g. "Bass-led / Balanced / Treble-led") or auto-tuning bass bias from the spectrum's centroid.
+3. **Histogram τ interaction with fast chord progressions.** Default 3 s feels good for the test chord but may lag a 4-bar 100 BPM progression (1.2 s/chord). Worth testing with a real progression and possibly exposing τ as a parameter or auto-adapting it from key-change rate.
+4. **IF stability gate** — never implemented (was in original plan §3-b). v1's peak picker has only magnitude + local-maximum gates. Vibrato is currently NOT rejected; the per-bin phase accumulator partly absorbs slow IF wandering but transient instability would let the snap fight the vibrato. Verify on solo-violin material; add gate if needed for v2.
+5. **Architecture choice for grouping order.** Should harmonic grouping happen *before* or *after* tonic estimation? Argument for "before": only deposit the f₀ pitch class into the histogram, not all the harmonics — cleaner tonic estimate. Argument for "after": tonic estimator works on raw peaks today and could keep working unchanged. Pick before; will need to re-test the JI dyad test against the new code path.
+6. **Test chord enhancement** — current ET triad demos C-major beautifully. Consider adding a chord-progression mode (I-vi-ii-V-I cycling every 2 s) to demo the comma-pump mitigation when v1 drift cap engages.
+7. **GUI polish** — JOS will sketch direction for v2 (see "GUI improvements" below); deferred to its own pass.
+8. **Validation list still unfinished**: solo violin with vibrato, drum-bus near-bypass, comma-pump test, full string-quartet listening test. Prioritize string quartet for v2a verification.
 
 ### v3 — production polish
 - Scala file loader.
 - Optional MIDI-side-chain key hint.
 - GUI: tonic readout, drift trail, "what got snapped" visualization.
 - Scope/quality knobs (snap strength, max drift rate, peak gate sensitivity).
+
+## GUI Improvements (v2 wishlist)
+
+Current state (end of v1c): functional but plain. Three sliders + four
+toggle/chooser controls, plus the live tonic label. Visual hierarchy is
+flat — Tonic Pitch ComboBox dominates because of default sizing; subtitle
+descenders clip again; sliders show unformatted numbers; nothing
+indicates whether snapping is engaged.
+
+### Tier A — XML only (~30 min, biggest visual lift per effort)
+- Center the title, bump to 32 pt.
+- Fix subtitle row min-height so descenders ("p", "J") aren't clipped.
+- Cap the Tonic Pitch ComboBox `max-height` so it stops dominating.
+- Slider value formatting: PGM supports `value-suffix=" c/s"`, etc., so
+  Drift Rate reads "60 c/s" instead of "60.0", Bass Bias "1.0×", Snap
+  Strength "100%".
+- Visual grouping by purpose, using `<View background-color="…">` panels:
+  - **Tonic** panel: Tonic Lock + Tonic Pitch chooser + Drift Rate +
+    Bass Bias.
+  - **Engine** panel: Snap Strength + Bypass.
+  - **Demo** footer: Test Chord.
+- Per-toggle accent colors so they're distinguishable at a glance:
+  - Bypass: muted red when active.
+  - Test Chord: blue when active.
+  - Tonic Lock: gold/amber when active.
+
+### Tier B — small custom GuiItem factories (~half day)
+- Replace Tonic Pitch ComboBox with a row of 12 piano-key-shaped toggle
+  buttons (white-key + black-key styling) for a more on-genre, visually
+  legible chooser.
+- Subtle "engaged" indicator: a small pulsing/glowing dot near the title
+  when `bypass=false` AND `snapStrength > 0` — confirms AutoJust is
+  doing work, beyond the audible signal.
+
+### Tier C — informative visualizations (later, v3 polish)
+- Live histogram visualization under the tonic readout: a horizontal bar
+  showing accumulated pitch evidence across the octave, with the chosen
+  grid's ratio positions marked. Dual purpose — beautiful and
+  diagnostic.
+- Spectrum view with peak markers and snap-arrows showing what's being
+  retuned this frame; the "what just got snapped" affordance from the
+  v3 plan, made visible.
+
+JOS will pick a direction at the start of the next session. Tier A is
+the obvious "do this first" — pure XML changes, immediate quality lift.
 
 ## Real Pitfalls / Open Risks
 
