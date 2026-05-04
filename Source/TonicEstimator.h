@@ -57,6 +57,14 @@ public:
         higher k → more aggressive bass bias. */
     void setBassBiasExponent  (float k)  noexcept { bassBiasExp = k; }
 
+    /** Lock the tonic to a fixed cents-mod-octave value, bypassing the
+        histogram + slew. Pass locked=false to re-enable auto-detection. */
+    void setLock (bool locked, float cents = 0.0f) noexcept
+    {
+        lockedCents.store (cents,  std::memory_order_relaxed);
+        isLocked   .store (locked, std::memory_order_relaxed);
+    }
+
     int  getNumBins() const noexcept { return numBins; }
 
 private:
@@ -77,6 +85,8 @@ private:
     std::vector<float> hist;
 
     std::atomic<float> currentTonicCents { 0.0f };
+    std::atomic<bool>  isLocked          { false };
+    std::atomic<float> lockedCents       { 0.0f };
     bool initialized = false;            // first valid update seeds the slew
 };
 

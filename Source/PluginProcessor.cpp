@@ -44,9 +44,13 @@ private:
 
 AutoJustAudioProcessor::AutoJustAudioProcessor()
 {
-    bypassParam    = treeState.getRawParameterValue ("bypass");
-    snapStrength   = treeState.getRawParameterValue ("snapStrength");
-    testChordParam = treeState.getRawParameterValue ("testChord");
+    bypassParam      = treeState.getRawParameterValue ("bypass");
+    snapStrength     = treeState.getRawParameterValue ("snapStrength");
+    testChordParam   = treeState.getRawParameterValue ("testChord");
+    tonicLockParam   = treeState.getRawParameterValue ("tonicLock");
+    tonicPitchParam  = treeState.getRawParameterValue ("tonicPitch");
+    driftRateParam   = treeState.getRawParameterValue ("driftRate");
+    bassBiasParam    = treeState.getRawParameterValue ("bassBias");
 
     tonicLabelValue.setValue (juce::String ("Tonic: —"));
 
@@ -99,6 +103,24 @@ AutoJustAudioProcessor::createParameterLayout()
 
     layout.add (std::make_unique<juce::AudioParameterBool> (
         juce::ParameterID { "testChord", 1 }, "Test Chord", false));
+
+    layout.add (std::make_unique<juce::AudioParameterBool> (
+        juce::ParameterID { "tonicLock", 1 }, "Tonic Lock", false));
+
+    layout.add (std::make_unique<juce::AudioParameterChoice> (
+        juce::ParameterID { "tonicPitch", 1 }, "Tonic Pitch",
+        juce::StringArray { "A","Bb","B","C","Db","D","Eb","E","F","Gb","G","Ab" },
+        3 /* default index = C */));
+
+    // 5..200 cents/sec spans "rock-stable mastering" to "snappy live demo"
+    layout.add (std::make_unique<juce::AudioParameterFloat> (
+        juce::ParameterID { "driftRate", 1 }, "Drift Rate (c/s)",
+        juce::NormalisableRange<float> (5.0f, 200.0f, 0.1f), 60.0f));
+
+    // 0..3: 0 = no bias (any pitch class can win), 1 = 1/f, 3 = strong bass
+    layout.add (std::make_unique<juce::AudioParameterFloat> (
+        juce::ParameterID { "bassBias", 1 }, "Bass Bias",
+        juce::NormalisableRange<float> (0.0f, 3.0f, 0.01f), 1.0f));
 
     return layout;
 }
@@ -167,6 +189,23 @@ void AutoJustAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     analyzer.setEnabled (! bypass);
     if (snapStrength != nullptr)
         analyzer.setSnapStrength (*snapStrength);
+
+    // Tier-1 fine-tune params → tonic estimator.
+    auto& tonic = analyzer.getTonicEstimator();
+    if (driftRateParam != nullptr) tonic.setMaxDriftCpsPerSec (*driftRateParam);
+    if (bassBiasParam  != nullptr) tonic.setBassBiasExponent  (*bassBiasParam);
+
+    const bool tonicLocked = (tonicLockParam != nullptr) && (*tonicLockParam > 0.5f);
+    if (tonicLocked && tonicPitchParam != nullptr)
+    {
+        // tonicPitch index 0 = A, 1 = Bb, ..., 11 = Ab; cents from A in 100c steps.
+        const int pitchIdx = (int) (*tonicPitchParam + 0.5f);
+        tonic.setLock (true, 100.0f * (float) pitchIdx);
+    }
+    else
+    {
+        tonic.setLock (false);
+    }
 
     analyzer.process (buffer);
 }

@@ -28,10 +28,16 @@
     <Label text="adaptive Just Intonation"
            min-height="22" max-height="28" label-font-size="13" text-color="0xffaaaaaa"/>
     <TonicLabel min-height="28" max-height="36"/>
-    <View flex-direction="row" padding="8">
+    <View flex-direction="row" padding="6">
       <Slider caption="Snap Strength" parameter="snapStrength" slider-type="linear-horizontal"/>
-      <ToggleButton caption="Test Chord" parameter="testChord" max-width="120"/>
-      <ToggleButton caption="Bypass" parameter="bypass" max-width="120"/>
+      <Slider caption="Drift Rate"    parameter="driftRate"    slider-type="linear-horizontal"/>
+      <Slider caption="Bass Bias"     parameter="bassBias"     slider-type="linear-horizontal"/>
+    </View>
+    <View flex-direction="row" padding="6">
+      <ToggleButton caption="Tonic Lock" parameter="tonicLock" max-width="140"/>
+      <ComboBox     caption="Tonic Pitch" parameter="tonicPitch" max-width="160"/>
+      <ToggleButton caption="Test Chord" parameter="testChord" max-width="140"/>
+      <ToggleButton caption="Bypass"     parameter="bypass"     max-width="140"/>
     </View>
   </View>
 </magic>

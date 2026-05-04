@@ -69,6 +69,14 @@ std::vector<float> TonicEstimator::getHistogram() const
 
 void TonicEstimator::update (const std::vector<ResolvedPeak>& peaks)
 {
+    // Lock mode: just publish the held cents and skip the histogram entirely.
+    if (isLocked.load (std::memory_order_relaxed))
+    {
+        currentTonicCents.store (lockedCents.load (std::memory_order_relaxed),
+                                 std::memory_order_relaxed);
+        return;
+    }
+
     float candidateCents = 0.0f;
     bool  haveSignal     = false;
 

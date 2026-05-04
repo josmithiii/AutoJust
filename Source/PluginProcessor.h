@@ -47,9 +47,13 @@ private:
     juce::AudioProcessorValueTreeState treeState
         { *this, nullptr, "PARAMETERS", createParameterLayout() };
 
-    std::atomic<float>* bypassParam    { nullptr };
-    std::atomic<float>* snapStrength   { nullptr };
-    std::atomic<float>* testChordParam { nullptr };
+    std::atomic<float>* bypassParam      { nullptr };
+    std::atomic<float>* snapStrength     { nullptr };
+    std::atomic<float>* testChordParam   { nullptr };
+    std::atomic<float>* tonicLockParam   { nullptr };
+    std::atomic<float>* tonicPitchParam  { nullptr };
+    std::atomic<float>* driftRateParam   { nullptr };
+    std::atomic<float>* bassBiasParam    { nullptr };
 
     autojust::Retuner analyzer { 12, 4 }; // 4096-sample frame, 75% overlap
 
