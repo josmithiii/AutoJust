@@ -58,11 +58,12 @@ void AutoJustAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     for (int ch = totalIn; ch < totalOut; ++ch)
         buffer.clear (ch, 0, buffer.getNumSamples());
 
-    // v0.3: STFT round-trip + per-frame peak picking with IF correction.
-    // Audio is still identity (PeakAnalyzer's processSpectrum doesn't modify
-    // the spectrum); resolved peaks are exposed via analyzer.getResolvedPeaks()
-    // for diagnostics/GUI. v1 will modify the spectrum to retune those peaks.
-    juce::ignoreUnused (bypassParam, snapStrength);
+    // v1b: bypass=false enables JI snapping; snapStrength scales attractor pull.
+    const bool bypass = (bypassParam != nullptr) && (*bypassParam > 0.5f);
+    analyzer.setEnabled (! bypass);
+    if (snapStrength != nullptr)
+        analyzer.setSnapStrength (*snapStrength);
+
     analyzer.process (buffer);
 }
 

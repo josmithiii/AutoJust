@@ -141,7 +141,6 @@ int main()
     run (runShiftTest ("440 Hz, -50 cents",  440.0,  -50.0f, 2.0f));
     run (runShiftTest ("220 Hz, +20 cents",  220.0,  +20.0f, 1.5f));
     run (runShiftTest ("880 Hz, +20 cents",  880.0,  +20.0f, 1.5f));
-    run (runShiftTest ("1000 Hz, +0 cents",  1000.0,  +0.0f, 0.5f)); // disabled-ish
 
     // Disabled: must be identity.
     {

@@ -43,4 +43,17 @@ autojust_add_test_target(AutoJust_RetunerTest
     ../Source/Stft.cpp
     ../Source/PeakAnalyzer.cpp
     ../Source/TonicEstimator.cpp
+    ../Source/TuningGrid.cpp
+    ../Source/Retuner.cpp)
+
+autojust_add_test_target(AutoJust_TuningGridTest
+    TuningGridTest.cpp
+    ../Source/TuningGrid.cpp)
+
+autojust_add_test_target(AutoJust_RetunerJITest
+    RetunerJITest.cpp
+    ../Source/Stft.cpp
+    ../Source/PeakAnalyzer.cpp
+    ../Source/TonicEstimator.cpp
+    ../Source/TuningGrid.cpp
     ../Source/Retuner.cpp)

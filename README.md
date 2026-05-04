@@ -15,11 +15,11 @@ See [`AutoJust_PLAN.md`](AutoJust_PLAN.md) for the design (signal flow, tuning-g
 | v0.3 | Peak picker + IF estimation + diagnostics | done |
 | v0.4 | Tonic estimator (histogram + LPF + drift) | done |
 | v1a  | Single-peak retune (Laroche-Dolson differential phase rotation) | done |
-| v1b  | All-peaks retune onto 5-limit JI grid relative to moving tonic | next |
-| v2   | Harmonic grouping + multiple grid types | |
+| v1b  | All-peaks retune onto 5-limit JI grid relative to moving tonic | done |
+| v2   | Harmonic grouping + multiple grid types | next |
 | v3   | Scala loader, MIDI key hint, scope/visualization | |
 
-Currently AutoJust is **identity-passthrough via STFT round-trip** — audio comes out the same as it went in (within machine epsilon), delayed by 4096 samples.
+As of v1b, AutoJust does the headline thing: every resolved spectral peak is softly pulled toward the nearest 5-limit Just Intonation ratio relative to the moving tonal center. With `bypass=true` (default GUI state) the plugin is identity-passthrough via STFT round-trip; flip `bypass=false` and dial in `snapStrength` to engage retuning. Audio comes out delayed by 4096 samples (~93 ms at 44.1 kHz, fully compensated by every modern DAW's PDC — see latency section below).
 
 ## Build
 
@@ -58,9 +58,17 @@ cmake --build build/release --target AutoJust_PeakAnalyzerTest --parallel
 cmake --build build/release --target AutoJust_TonicEstimatorTest --parallel
 ./build/release/Effects/AutoJust/tests/AutoJust_TonicEstimatorTest_artefacts/Release/AutoJust_TonicEstimatorTest
 
-# Retuner (single-peak Laroche-Dolson shift; output frequency at 0.000c error)
+# Retuner manual mode (single-peak L-D shift; output frequency at 0.000c)
 cmake --build build/release --target AutoJust_RetunerTest --parallel
 ./build/release/Effects/AutoJust/tests/AutoJust_RetunerTest_artefacts/Release/AutoJust_RetunerTest
+
+# 5-limit Just grid math (ET interval → JI delta accuracy)
+cmake --build build/release --target AutoJust_TuningGridTest --parallel
+./build/release/Effects/AutoJust/tests/AutoJust_TuningGridTest_artefacts/Release/AutoJust_TuningGridTest
+
+# JI snap end-to-end: ET dyad in → JI dyad out (E pulled to 5/4 at 0.004c)
+cmake --build build/release --target AutoJust_RetunerJITest --parallel
+./build/release/Effects/AutoJust/tests/AutoJust_RetunerJITest_artefacts/Release/AutoJust_RetunerJITest
 ```
 
 ## Layout
@@ -75,15 +83,19 @@ Effects/AutoJust/
     Stft.{h,cpp}              streaming Hann² OLA, default identity
     PeakAnalyzer.{h,cpp}      Stft subclass: peak pick + IF, exposes snapshot
     TonicEstimator.{h,cpp}    cents-mod-octave histogram + drift-limited slew
-    Retuner.{h,cpp}           PeakAnalyzer subclass: L-D phase-rotation retune
+    TuningGrid.{h,cpp}        abstract grid + JustGrid5Limit (5-limit JI)
+    Retuner.{h,cpp}           PeakAnalyzer subclass: L-D phase rotation +
+                              JI soft attractor on all peaks
   Resources/
     Layouts/AutoJust.xml      PGM GUI XML
   tests/
-    CMakeLists.txt            AutoJust_{Stft,PeakAnalyzer,TonicEstimator,Retuner}Test
+    CMakeLists.txt            test target helpers
     StftRoundTripTest.cpp     reconstruction error test
     PeakAnalyzerTest.cpp      IF-correction accuracy test
     TonicEstimatorTest.cpp    pitch-class settling + drift cap test
-    RetunerTest.cpp           single-peak shift accuracy test
+    RetunerTest.cpp           manual-mode single-peak shift accuracy
+    TuningGridTest.cpp        5-limit grid math + circular shortest path
+    RetunerJITest.cpp         end-to-end ET dyad → JI dyad shift
   docs/
     patents/                  reference material
 ```

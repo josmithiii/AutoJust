@@ -40,6 +40,7 @@ target_sources(${BaseTargetName} PRIVATE
         Source/Stft.cpp
         Source/PeakAnalyzer.cpp
         Source/TonicEstimator.cpp
+        Source/TuningGrid.cpp
         Source/Retuner.cpp
         )
 
