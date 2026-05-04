@@ -29,6 +29,7 @@
            min-height="22" max-height="28" label-font-size="13" text-color="0xffaaaaaa"/>
     <View flex-direction="row" padding="8">
       <Slider caption="Snap Strength" parameter="snapStrength" slider-type="linear-horizontal"/>
+      <ToggleButton caption="Test Chord" parameter="testChord" max-width="120"/>
       <ToggleButton caption="Bypass" parameter="bypass" max-width="120"/>
     </View>
   </View>

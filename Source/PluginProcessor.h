@@ -42,10 +42,15 @@ private:
     juce::AudioProcessorValueTreeState treeState
         { *this, nullptr, "PARAMETERS", createParameterLayout() };
 
-    std::atomic<float>* bypassParam   { nullptr };
-    std::atomic<float>* snapStrength  { nullptr };
+    std::atomic<float>* bypassParam    { nullptr };
+    std::atomic<float>* snapStrength   { nullptr };
+    std::atomic<float>* testChordParam { nullptr };
 
     autojust::Retuner analyzer { 12, 4 }; // 4096-sample frame, 75% overlap
+
+    // Test-chord oscillator state: ET C major triad C4, E4, G4. Phase in
+    // radians, advanced per sample on the audio thread when the toggle is on.
+    double testPhase[3] { 0.0, 0.0, 0.0 };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AutoJustAudioProcessor)
 };
