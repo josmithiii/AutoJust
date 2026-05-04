@@ -51,6 +51,12 @@ public:
     void setHistogramTauSec   (float s)  noexcept { histTauSec  = s; recomputeRates(); }
     void setMaxDriftCpsPerSec (float c)  noexcept { maxDriftCps = c; recomputeRates(); }
 
+    /** Weight each peak's histogram contribution by (refFreqHz / freq)^k.
+        k = 0 → no bias; k = 1 → 1/f bass bias (default — bass dominates,
+        matching the musical convention that the bass voice is the root);
+        higher k → more aggressive bass bias. */
+    void setBassBiasExponent  (float k)  noexcept { bassBiasExp = k; }
+
     int  getNumBins() const noexcept { return numBins; }
 
 private:
@@ -59,7 +65,8 @@ private:
     int    numBins;
     float  refFreqHz   = 440.0f;
     float  histTauSec  = 3.0f;
-    float  maxDriftCps = 10.0f;          // cents per second
+    float  maxDriftCps = 60.0f;          // cents per second
+    float  bassBiasExp = 1.0f;           // (refFreqHz / freq)^k weighting
 
     double sampleRate         = 44100.0;
     int    hopSize            = 1024;

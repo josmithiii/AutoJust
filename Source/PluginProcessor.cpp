@@ -140,8 +140,8 @@ void AutoJustAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     const bool testChord = (testChordParam != nullptr) && (*testChordParam > 0.5f);
     if (testChord)
     {
-        constexpr double freqs[3] = { 261.6256, 329.6276, 391.9954 }; // C4, E4 (ET), G4 (ET)
-        constexpr float  voiceAmp = 0.20f;
+        constexpr double freqs[3]    = { 261.6256, 329.6276, 391.9954 }; // C4, E4 (ET), G4 (ET)
+        constexpr float  voiceAmps[3] = { 0.32f,    0.18f,    0.18f    }; // C dominant
         const double sr = getSampleRate();
         const int    n  = buffer.getNumSamples();
         const double twoPi = juce::MathConstants<double>::twoPi;
@@ -152,7 +152,7 @@ void AutoJustAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
             float s = 0.0f;
             for (int v = 0; v < 3; ++v)
             {
-                s += voiceAmp * (float) std::sin (testPhase[v]);
+                s += voiceAmps[v] * (float) std::sin (testPhase[v]);
                 testPhase[v] += twoPi * freqs[v] / sr;
                 if (testPhase[v] > twoPi) testPhase[v] -= twoPi;
             }

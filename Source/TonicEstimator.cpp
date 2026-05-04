@@ -78,11 +78,20 @@ void TonicEstimator::update (const std::vector<ResolvedPeak>& peaks)
         // 1. Decay.
         for (auto& v : hist) v *= decayPerFrame;
 
-        // 2. Deposit each peak with linear interpolation across two bins.
+        // 2. Deposit each peak with linear interpolation across two bins,
+        //    weighted by (ref/f)^bassBiasExp so low frequencies count more.
+        //    Rationale: in tonal music the bass voice is almost always the
+        //    root; on equal-amplitude polyphonic input this disambiguates
+        //    the tonic tie that would otherwise be decided by FP rounding.
         const float binsPer1200 = (float) numBins / 1200.0f;
         for (const auto& p : peaks)
         {
             if (p.frequencyHz <= 0.0f) continue;
+            const float bassW = (bassBiasExp != 0.0f)
+                                ? std::pow (refFreqHz / std::max (20.0f, p.frequencyHz),
+                                            bassBiasExp)
+                                : 1.0f;
+            const float w     = p.magnitude * bassW;
             const float cents = 1200.0f * std::log2 (p.frequencyHz / refFreqHz);
             const float cmo   = wrapToCircle (cents);
             const float bin   = cmo * binsPer1200;
@@ -90,8 +99,8 @@ void TonicEstimator::update (const std::vector<ResolvedPeak>& peaks)
             const float frac  = bin - (float) ib;
             const int   i0    = ((ib    ) % numBins + numBins) % numBins;
             const int   i1    = ((ib + 1) % numBins + numBins) % numBins;
-            hist[(size_t) i0] += p.magnitude * (1.0f - frac);
-            hist[(size_t) i1] += p.magnitude * frac;
+            hist[(size_t) i0] += w * (1.0f - frac);
+            hist[(size_t) i1] += w * frac;
         }
 
         // 3. argmax.
