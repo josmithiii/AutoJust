@@ -4,6 +4,43 @@
 // will be filled in incrementally per AutoJust_PLAN.md.
 
 #include "PluginProcessor.h"
+#include "TonicEstimator.h"
+
+namespace
+{
+
+/** PGM widget that binds a juce::Label's text to the AudioProcessor's
+    tonic-label Value (which is updated on the message thread by a timer). */
+class TonicLabelItem : public foleys::GuiItem
+{
+public:
+    FOLEYS_DECLARE_GUI_FACTORY (TonicLabelItem)
+
+    TonicLabelItem (foleys::MagicGUIBuilder& b, juce::ValueTree node)
+        : foleys::GuiItem (b, node)
+    {
+        addAndMakeVisible (label);
+        label.setJustificationType (juce::Justification::centred);
+        label.setColour (juce::Label::textColourId, juce::Colours::white);
+        label.setFont (juce::Font (juce::FontOptions (16.0f, juce::Font::bold)));
+
+        if (auto* mps = dynamic_cast<foleys::MagicProcessorState*> (&b.getMagicState()))
+            if (auto* proc = mps->getProcessor())
+                if (auto* aj = dynamic_cast<AutoJustAudioProcessor*> (proc))
+                    label.getTextValue().referTo (aj->getTonicLabelValue());
+    }
+
+    juce::Component* getWrappedComponent() override { return &label; }
+
+    /** Called by PGM after parsing XML attrs; nothing to do — text is bound
+        to the processor's juce::Value and updates via that path. */
+    void update() override {}
+
+private:
+    juce::Label label;
+};
+
+} // anonymous namespace
 
 AutoJustAudioProcessor::AutoJustAudioProcessor()
 {
@@ -11,7 +48,41 @@ AutoJustAudioProcessor::AutoJustAudioProcessor()
     snapStrength   = treeState.getRawParameterValue ("snapStrength");
     testChordParam = treeState.getRawParameterValue ("testChord");
 
+    tonicLabelValue.setValue (juce::String ("Tonic: —"));
+
     magicState.setGuiValueTree (BinaryData::AutoJust_xml, BinaryData::AutoJust_xmlSize);
+
+    startTimerHz (25); // 40 ms — well under perceptual threshold for label updates
+}
+
+AutoJustAudioProcessor::~AutoJustAudioProcessor()
+{
+    stopTimer();
+}
+
+void AutoJustAudioProcessor::timerCallback()
+{
+    const float t = analyzer.getTonicEstimator().getTonicCents();
+
+    // Convert cents-from-A4 to nearest semitone-class + signed cents offset.
+    // Pitch class index: bin 0 = A, advancing in semitones.
+    static const char* const names[12] = {
+        "A", "Bb", "B", "C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab"
+    };
+    int   semi  = (int) std::round (t / 100.0f);
+    semi = ((semi % 12) + 12) % 12;
+    const float resid = t - 100.0f * std::round (t / 100.0f);
+
+    const auto s = juce::String::formatted ("Tonic: %s  %+.1fc  (raw %.1f)",
+                                            names[semi], resid, t);
+    tonicLabelValue.setValue (s);
+
+    if (std::abs (t - lastReportedTonic) > 5.0f)
+    {
+        std::printf ("AutoJust tonic → %s\n", s.toRawUTF8());
+        std::fflush (stdout);
+        lastReportedTonic = t;
+    }
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout
@@ -104,6 +175,7 @@ void AutoJustAudioProcessor::initialiseBuilder (foleys::MagicGUIBuilder& builder
 {
     builder.registerJUCEFactories();
     builder.registerJUCELookAndFeels();
+    builder.registerFactory ("TonicLabel", &TonicLabelItem::factory);
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()

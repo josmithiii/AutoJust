@@ -7,11 +7,12 @@
 #include <JuceHeader.h>
 #include "Retuner.h"
 
-class AutoJustAudioProcessor : public foleys::MagicProcessor
+class AutoJustAudioProcessor : public foleys::MagicProcessor,
+                                private juce::Timer
 {
 public:
     AutoJustAudioProcessor();
-    ~AutoJustAudioProcessor() override = default;
+    ~AutoJustAudioProcessor() override;
 
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
@@ -23,6 +24,10 @@ public:
     void processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi) override;
 
     void initialiseBuilder (foleys::MagicGUIBuilder& builder) override;
+
+    /** Bound to the TonicLabel widget; updated by the message-thread timer
+        with the latest tonic estimate as a formatted string. */
+    juce::Value& getTonicLabelValue() noexcept { return tonicLabelValue; }
 
     const juce::String getName() const override            { return JucePlugin_Name; }
     bool acceptsMidi() const override                      { return false; }
@@ -51,6 +56,10 @@ private:
     // Test-chord oscillator state: ET C major triad C4, E4, G4. Phase in
     // radians, advanced per sample on the audio thread when the toggle is on.
     double testPhase[3] { 0.0, 0.0, 0.0 };
+
+    void timerCallback() override;
+    juce::Value tonicLabelValue;
+    float       lastReportedTonic { -9999.0f };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AutoJustAudioProcessor)
 };
