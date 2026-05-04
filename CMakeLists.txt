@@ -37,6 +37,7 @@ juce_generate_juce_header(${BaseTargetName})
 
 target_sources(${BaseTargetName} PRIVATE
         Source/PluginProcessor.cpp
+        Source/Stft.cpp
         )
 
 target_compile_definitions(${BaseTargetName}
@@ -87,3 +88,5 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
 endif()
 
 message("AutoJust: ./build/<preset>/Effects/${BaseTargetName}/${BaseTargetName}_artefacts/<Config>/Standalone/${BaseTargetName}.app")
+
+add_subdirectory(tests)

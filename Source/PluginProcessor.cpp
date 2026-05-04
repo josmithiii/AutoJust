@@ -28,12 +28,15 @@ AutoJustAudioProcessor::createParameterLayout()
     return layout;
 }
 
-void AutoJustAudioProcessor::prepareToPlay (double, int)
+void AutoJustAudioProcessor::prepareToPlay (double /*sampleRate*/, int samplesPerBlock)
 {
+    stft.prepare (juce::jmax (1, getTotalNumOutputChannels()), samplesPerBlock);
+    setLatencySamples (stft.getLatencySamples());
 }
 
 void AutoJustAudioProcessor::releaseResources()
 {
+    stft.reset();
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -55,8 +58,10 @@ void AutoJustAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     for (int ch = totalIn; ch < totalOut; ++ch)
         buffer.clear (ch, 0, buffer.getNumSamples());
 
-    // v0: identity passthrough. STFT-based retuner replaces this in v1.
+    // v0.2: STFT round-trip with identity spectrum modification.
+    // v1 will subclass Stft and override processSpectrum() to retune peaks.
     juce::ignoreUnused (bypassParam, snapStrength);
+    stft.process (buffer);
 }
 
 void AutoJustAudioProcessor::initialiseBuilder (foleys::MagicGUIBuilder& builder)

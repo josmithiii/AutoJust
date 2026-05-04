@@ -136,7 +136,7 @@ Tonic estimator stays the same across grids — only the snap targets change.
 
 ### v0 — proof of life
 - [x] **v0.1 Plugin scaffold** (done 2026-05-04). `Effects/AutoJust/` builds as Standalone + AU + VST3 universal binary; PGM GUI loads with stub `bypass` / `snapStrength` params; audio is identity-passthrough. No DSP yet.
-- [ ] **v0.2 STFT identity round-trip.** Add `Source/Stft.{h,cpp}`. Hann analysis + synthesis windows, 75% overlap, 4096-sample frame. Plugin still passes audio through, but now via STFT → ISTFT round-trip. Verify reconstruction error is at machine epsilon over sine sweeps + white noise. Unit test in `tests/`.
+- [x] **v0.2 STFT identity round-trip** (done 2026-05-04). `Source/Stft.{h,cpp}` — Hann² OLA, 4096/1024 (75% overlap), in-place per-channel streaming. `tests/StftRoundTripTest.cpp` runs sine, sweep, noise, impulse, DC; peak reconstruction error ≤ 6e-7 across all signals after latency alignment. Plugin uses it in `processBlock`; latency reported via `setLatencySamples(fftSize)`. Note: Hann² needs overlap ≥ 3 for COLA (overlap=2 leaves a residual cos(4πt/N) ripple); asserted in ctor.
 - [ ] **v0.3 Peak picker + diagnostics.** Add peak detection with IF estimation, log resolved peaks; no retuning yet.
 - [ ] **v0.4 Tonic estimator.** Histogram + LPF; log moving tonic.
 
