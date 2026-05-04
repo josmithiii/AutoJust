@@ -29,4 +29,11 @@ autojust_add_test_target(AutoJust_StftTest
 autojust_add_test_target(AutoJust_PeakAnalyzerTest
     PeakAnalyzerTest.cpp
     ../Source/Stft.cpp
-    ../Source/PeakAnalyzer.cpp)
+    ../Source/PeakAnalyzer.cpp
+    ../Source/TonicEstimator.cpp)
+
+autojust_add_test_target(AutoJust_TonicEstimatorTest
+    TonicEstimatorTest.cpp
+    ../Source/Stft.cpp
+    ../Source/PeakAnalyzer.cpp
+    ../Source/TonicEstimator.cpp)

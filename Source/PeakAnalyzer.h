@@ -22,6 +22,7 @@
 
 #include <vector>
 #include <atomic>
+#include <memory>
 #include <mutex>
 
 namespace autojust
@@ -34,13 +35,21 @@ struct ResolvedPeak
     int   bin         = 0;      ///< nearest FFT bin
 };
 
+class TonicEstimator;
+
 class PeakAnalyzer : public Stft
 {
 public:
     PeakAnalyzer (int fftOrder = 12, int overlapFactor = 4);
+    ~PeakAnalyzer() override;
 
     void prepare (double sampleRate, int numChannels, int maxBlockSize);
     void reset();
+
+    /** Tonic estimator that consumes resolved peaks each frame. Always
+        present; configurable via accessors on the returned reference. */
+    TonicEstimator&       getTonicEstimator()       noexcept { return *tonic; }
+    const TonicEstimator& getTonicEstimator() const noexcept { return *tonic; }
 
     /** Snapshot of the most recent resolved peaks. Thread-safe; cheap to
         call from the GUI / message thread. */
@@ -76,6 +85,8 @@ private:
     // try_lock; if a reader holds it we drop this frame's update.
     mutable std::mutex peaksMutex;
     std::vector<ResolvedPeak> latestPeaks;
+
+    std::unique_ptr<TonicEstimator> tonic;
 };
 
 } // namespace autojust

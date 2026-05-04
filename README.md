@@ -13,8 +13,8 @@ See [`AutoJust_PLAN.md`](AutoJust_PLAN.md) for the design (signal flow, tuning-g
 | v0.1 | Plugin scaffold — Standalone + AU + VST3, PGM GUI, stub params | done |
 | v0.2 | Streaming STFT identity round-trip + unit test | done |
 | v0.3 | Peak picker + IF estimation + diagnostics | done |
-| v0.4 | Tonic estimator (histogram + LPF + drift) | next |
-| v1   | Per-peak soft-attractor onto 5-limit JI grid | |
+| v0.4 | Tonic estimator (histogram + LPF + drift) | done |
+| v1   | Per-peak soft-attractor onto 5-limit JI grid (Laroche-Dolson identity phase locking) | next |
 | v2   | Harmonic grouping + multiple grid types | |
 | v3   | Scala loader, MIDI key hint, scope/visualization | |
 
@@ -52,6 +52,10 @@ cmake --build build/release --target AutoJust_StftTest --parallel
 # Peak picker + IF estimation (pure tones detected to ≤ 0.001 cents)
 cmake --build build/release --target AutoJust_PeakAnalyzerTest --parallel
 ./build/release/Effects/AutoJust/tests/AutoJust_PeakAnalyzerTest_artefacts/Release/AutoJust_PeakAnalyzerTest
+
+# Tonic estimator (settles to dominant pitch class, drift cap honored)
+cmake --build build/release --target AutoJust_TonicEstimatorTest --parallel
+./build/release/Effects/AutoJust/tests/AutoJust_TonicEstimatorTest_artefacts/Release/AutoJust_TonicEstimatorTest
 ```
 
 ## Layout
@@ -65,12 +69,14 @@ Effects/AutoJust/
     PluginProcessor.{h,cpp}   foleys::MagicProcessor — params + analyzer wiring
     Stft.{h,cpp}              streaming Hann² OLA, default identity
     PeakAnalyzer.{h,cpp}      Stft subclass: peak pick + IF, exposes snapshot
+    TonicEstimator.{h,cpp}    cents-mod-octave histogram + drift-limited slew
   Resources/
     Layouts/AutoJust.xml      PGM GUI XML
   tests/
-    CMakeLists.txt            AutoJust_{Stft,PeakAnalyzer}Test console targets
+    CMakeLists.txt            AutoJust_{Stft,PeakAnalyzer,TonicEstimator}Test
     StftRoundTripTest.cpp     reconstruction error test
     PeakAnalyzerTest.cpp      IF-correction accuracy test
+    TonicEstimatorTest.cpp    pitch-class settling + drift cap test
   docs/
     patents/                  reference material
 ```

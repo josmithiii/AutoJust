@@ -1,4 +1,5 @@
 #include "PeakAnalyzer.h"
+#include "TonicEstimator.h"
 
 #include <cmath>
 #include <algorithm>
@@ -20,10 +21,13 @@ namespace
 }
 
 PeakAnalyzer::PeakAnalyzer (int fftOrderIn, int overlapFactorIn)
-    : Stft (fftOrderIn, overlapFactorIn)
+    : Stft (fftOrderIn, overlapFactorIn),
+      tonic (std::make_unique<TonicEstimator>())
 {
     numBins = getFftSize() / 2 + 1;
 }
+
+PeakAnalyzer::~PeakAnalyzer() = default;
 
 void PeakAnalyzer::prepare (double sampleRateIn, int numChannels, int maxBlockSize)
 {
@@ -37,6 +41,8 @@ void PeakAnalyzer::prepare (double sampleRateIn, int numChannels, int maxBlockSi
         std::lock_guard<std::mutex> lk (peaksMutex);
         latestPeaks.clear();
     }
+
+    tonic->prepare (sampleRateIn, getHopSize());
 }
 
 void PeakAnalyzer::reset()
@@ -45,8 +51,12 @@ void PeakAnalyzer::reset()
     for (auto& ch : prevPhase)
         std::fill (ch.begin(), ch.end(), 0.0f);
 
-    std::lock_guard<std::mutex> lk (peaksMutex);
-    latestPeaks.clear();
+    {
+        std::lock_guard<std::mutex> lk (peaksMutex);
+        latestPeaks.clear();
+    }
+
+    tonic->reset();
 }
 
 std::vector<ResolvedPeak> PeakAnalyzer::getResolvedPeaks() const
@@ -122,7 +132,12 @@ void PeakAnalyzer::processSpectrum (float* data, int fftSize, int channel)
     // 6. Update phase history (always, even for non-peak bins).
     std::copy (phase.begin(), phase.end(), prev.begin());
 
-    // 7. Publish snapshot for the report channel only. try_lock so audio
+    // 7. Update tonic estimator (only from the report channel — no point
+    //    duplicating work or fighting between channels).
+    if (channel == reportChannel)
+        tonic->update (peaks);
+
+    // 8. Publish snapshot for the report channel only. try_lock so audio
     //    thread never blocks on a reader.
     if (channel == reportChannel)
     {
