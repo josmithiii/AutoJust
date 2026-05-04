@@ -37,3 +37,10 @@ autojust_add_test_target(AutoJust_TonicEstimatorTest
     ../Source/Stft.cpp
     ../Source/PeakAnalyzer.cpp
     ../Source/TonicEstimator.cpp)
+
+autojust_add_test_target(AutoJust_RetunerTest
+    RetunerTest.cpp
+    ../Source/Stft.cpp
+    ../Source/PeakAnalyzer.cpp
+    ../Source/TonicEstimator.cpp
+    ../Source/Retuner.cpp)

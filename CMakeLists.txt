@@ -40,6 +40,7 @@ target_sources(${BaseTargetName} PRIVATE
         Source/Stft.cpp
         Source/PeakAnalyzer.cpp
         Source/TonicEstimator.cpp
+        Source/Retuner.cpp
         )
 
 target_compile_definitions(${BaseTargetName}

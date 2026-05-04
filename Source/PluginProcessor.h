@@ -5,7 +5,7 @@
 #pragma once
 
 #include <JuceHeader.h>
-#include "PeakAnalyzer.h"
+#include "Retuner.h"
 
 class AutoJustAudioProcessor : public foleys::MagicProcessor
 {
@@ -45,7 +45,7 @@ private:
     std::atomic<float>* bypassParam   { nullptr };
     std::atomic<float>* snapStrength  { nullptr };
 
-    autojust::PeakAnalyzer analyzer { 12, 4 }; // 4096-sample frame, 75% overlap
+    autojust::Retuner analyzer { 12, 4 }; // 4096-sample frame, 75% overlap
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AutoJustAudioProcessor)
 };

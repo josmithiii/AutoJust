@@ -68,6 +68,18 @@ public:
 protected:
     void processSpectrum (float* data, int fftSize, int channel) override;
 
+    /** Detect peaks + IF-correct in `data` and update per-channel phase history.
+        Available to subclasses that want the peak set during processSpectrum. */
+    std::vector<ResolvedPeak> detectAndCorrectPeaks (float* data, int fftSize, int channel);
+
+    /** Subclass hook fired after peaks are detected; spectrum may be modified
+        in place. Default: no-op (identity). Called every frame, every channel.
+        `peaks` was just reported on this channel. */
+    virtual void onPeaksDetected (float* /*data*/, int /*fftSize*/, int /*channel*/,
+                                  const std::vector<ResolvedPeak>& /*peaks*/) {}
+
+    double getSampleRate() const noexcept { return sampleRate; }
+
 private:
     double sampleRate     = 44100.0;
     float  peakThresholdDb = 12.0f;

@@ -14,7 +14,8 @@ See [`AutoJust_PLAN.md`](AutoJust_PLAN.md) for the design (signal flow, tuning-g
 | v0.2 | Streaming STFT identity round-trip + unit test | done |
 | v0.3 | Peak picker + IF estimation + diagnostics | done |
 | v0.4 | Tonic estimator (histogram + LPF + drift) | done |
-| v1   | Per-peak soft-attractor onto 5-limit JI grid (Laroche-Dolson identity phase locking) | next |
+| v1a  | Single-peak retune (Laroche-Dolson differential phase rotation) | done |
+| v1b  | All-peaks retune onto 5-limit JI grid relative to moving tonic | next |
 | v2   | Harmonic grouping + multiple grid types | |
 | v3   | Scala loader, MIDI key hint, scope/visualization | |
 
@@ -56,6 +57,10 @@ cmake --build build/release --target AutoJust_PeakAnalyzerTest --parallel
 # Tonic estimator (settles to dominant pitch class, drift cap honored)
 cmake --build build/release --target AutoJust_TonicEstimatorTest --parallel
 ./build/release/Effects/AutoJust/tests/AutoJust_TonicEstimatorTest_artefacts/Release/AutoJust_TonicEstimatorTest
+
+# Retuner (single-peak Laroche-Dolson shift; output frequency at 0.000c error)
+cmake --build build/release --target AutoJust_RetunerTest --parallel
+./build/release/Effects/AutoJust/tests/AutoJust_RetunerTest_artefacts/Release/AutoJust_RetunerTest
 ```
 
 ## Layout
@@ -70,13 +75,15 @@ Effects/AutoJust/
     Stft.{h,cpp}              streaming Hann² OLA, default identity
     PeakAnalyzer.{h,cpp}      Stft subclass: peak pick + IF, exposes snapshot
     TonicEstimator.{h,cpp}    cents-mod-octave histogram + drift-limited slew
+    Retuner.{h,cpp}           PeakAnalyzer subclass: L-D phase-rotation retune
   Resources/
     Layouts/AutoJust.xml      PGM GUI XML
   tests/
-    CMakeLists.txt            AutoJust_{Stft,PeakAnalyzer,TonicEstimator}Test
+    CMakeLists.txt            AutoJust_{Stft,PeakAnalyzer,TonicEstimator,Retuner}Test
     StftRoundTripTest.cpp     reconstruction error test
     PeakAnalyzerTest.cpp      IF-correction accuracy test
     TonicEstimatorTest.cpp    pitch-class settling + drift cap test
+    RetunerTest.cpp           single-peak shift accuracy test
   docs/
     patents/                  reference material
 ```

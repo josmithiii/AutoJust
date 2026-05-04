@@ -141,9 +141,9 @@ Tonic estimator stays the same across grids — only the snap targets change.
 - [x] **v0.4 Tonic estimator** (done 2026-05-04). `Source/TonicEstimator.{h,cpp}`: per-frame circular histogram of cents-mod-octave (default 120 bins → 10 cents/bin) with magnitude-weighted linear-interpolated deposit and exponential decay (default τ = 3 s). Mode estimated by argmax + parabolic interpolation; published tonic slewed toward the candidate at a configurable max drift rate (default 10 cents/sec, the rate the design doc identifies as the inaudibility ceiling). First valid frame snaps to candidate (no slew from default 0). Wired into `PeakAnalyzer` — analyzer holds the estimator, calls `update()` from `processSpectrum` on the report channel. `tests/TonicEstimatorTest.cpp`: steady tones at 440 Hz and 523.25 Hz settle to within 0.05 cents of the expected pitch class; drift cap of 10 cents/sec produces ≤ 1.21 cents over 0.5 s when the input shifts; silence leaves the tonic unchanged.
 
 ### v1 — minimal viable retuner
-- Per-peak (no grouping yet) soft-attractor toward 5-limit JI grid.
-- Floating tonic with drift limit.
-- A/B bypass; latency reporting.
+- [x] **v1a Single-peak retune (math sanity)** (done 2026-05-04). `Source/Retuner.{h,cpp}` extends `PeakAnalyzer`, overrides `onPeaksDetected` (new hook in `PeakAnalyzer` — old `processSpectrum` refactored into `detectAndCorrectPeaks` + hook). Strongest peak only, fixed test cents shift (no JI grid yet). Method: per-channel accumulator α += 2π·Δf·H/fs each hop; multiply every bin in the peak's region of influence by exp(jα). Because α is constant across the region within a frame and varies linearly across frames, OLA reconstructs an output multiplied by exp(j·2π·Δf·t) — i.e. shifted by Δf Hz. Identity phase locking (same phasor for all bins in region) preserves intra-region phase relations per Laroche–Dolson 1999 §V-C-1. `tests/RetunerTest.cpp`: ±5/20/30/50 cents shifts at 220/440/880/1000 Hz all reproduce target frequency at 0.000 cents error; disabled mode is bit-identical. Plugin holds a `Retuner` (default `enabled=false`) so default behavior is unchanged from v0.4.
+- [ ] **v1b All-peaks retune onto 5-limit JI grid.** Soft attractor (zero outside ±50 cents, gentle pull inside). Region-of-influence carving up to next-peak midpoint. JI ratios relative to current `tonic->getTonicCents()`.
+- [ ] A/B bypass exposed via plugin parameter; latency reporting (already in place).
 - Test material: sustained string-quartet pad, organ chord progressions.
 
 ### v2 — harmonic grouping + multiple grids
