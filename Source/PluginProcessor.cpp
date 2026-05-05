@@ -1,8 +1,3 @@
-// AutoJust — v0 scaffolding: identity passthrough.
-// The DSP pipeline (STFT → peak picking → harmonic grouping → JI grid →
-// peak-locked spectral translation → ISTFT) lives behind processBlock and
-// will be filled in incrementally per AutoJust_PLAN.md.
-
 #include "PluginProcessor.h"
 #include "TonicEstimator.h"
 

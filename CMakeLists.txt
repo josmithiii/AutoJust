@@ -1,12 +1,81 @@
 # CMakeLists.txt for AutoJust — master-bus adaptive Just Intonation retuner
-# Effect plugin (not a synth). v0: identity passthrough scaffolding.
-# See AutoJust_PLAN.md for the full design.
+
+cmake_minimum_required(VERSION 3.16)
+
+# Detect whether we are the top-level project (standalone autojust repo)
+# or being built as a subdirectory of a parent (e.g. jos-juce-plugins).
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    set(AUTOJUST_STANDALONE TRUE)
+else()
+    set(AUTOJUST_STANDALONE FALSE)
+endif()
+
+if(AUTOJUST_STANDALONE AND APPLE AND NOT CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    set(CMAKE_OSX_SYSROOT "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk")
+endif()
 
 project(AutoJust
   VERSION 0.0.1
   DESCRIPTION "Master-bus adaptive Just Intonation retuner"
   LANGUAGES C CXX
 )
+
+if(AUTOJUST_STANDALONE)
+    if(APPLE)
+        set(MIN_MACOS_VERSION "12" CACHE STRING "Minimum macOS deployment version")
+        set(CMAKE_OSX_DEPLOYMENT_TARGET ${MIN_MACOS_VERSION} CACHE STRING "Minimum macOS deployment version" FORCE)
+        set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE INTERNAL "")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+    endif()
+
+    set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
+    set_property(GLOBAL PROPERTY USE_FOLDERS YES)
+    option(JUCE_ENABLE_MODULE_SOURCE_GROUPS "Enable Module Source Groups" ON)
+
+    add_library(jos_warning_flags INTERFACE)
+    target_compile_options(jos_warning_flags INTERFACE
+        -Winline
+        "-Wno-sign-conversion"
+        "-Wno-float-conversion"
+        "-Wno-unused-parameter"
+        "-Wno-unused-variable"
+        "-Wno-zero-as-null-pointer-constant"
+        "-Wno-float-equal"
+        "-Wno-multichar"
+        "-Wno-extra-semi"
+        "-Wno-switch-enum"
+        "-Wno-shadow"
+        "-Wno-deprecated-copy-with-user-provided-dtor"
+        "-Wno-deprecated-copy-with-dtor"
+        "-Wno-deprecated-declarations"
+        "-Wno-sign-compare"
+    )
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        target_compile_options(jos_warning_flags INTERFACE
+            "-Wno-shorten-64-to-32"
+            "-Wno-implicit-float-conversion"
+            "-Wno-unused-private-field"
+            "-Wno-vla-cxx-extension"
+            "-Wno-c++98-compat-extra-semi"
+            "-Wno-missing-prototypes"
+            "-Wno-#pragma-messages"
+            "-Wno-shadow-field"
+            "-Wno-implicit-int-conversion"
+            "-Wno-reorder-ctor"
+        )
+    endif()
+
+    add_subdirectory(
+        ${CMAKE_CURRENT_SOURCE_DIR}/submodules/JUCE
+        ${CMAKE_BINARY_DIR}/JUCE_build
+        EXCLUDE_FROM_ALL
+    )
+    add_subdirectory(
+        ${CMAKE_CURRENT_SOURCE_DIR}/submodules/pgmf/modules
+        ${CMAKE_BINARY_DIR}/foleys_gui_magic_build
+        EXCLUDE_FROM_ALL
+    )
+endif()
 
 set(BaseTargetName AutoJust)
 
@@ -82,15 +151,30 @@ target_link_libraries(${BaseTargetName}
             juce_recommended_lto_flags
             jos_warning_flags)
 
+# Silence warnings from JUCE / pgmf headers — paths differ between standalone
+# and parent-repo layouts.
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-    set_source_files_properties(
-        ${CMAKE_CURRENT_SOURCE_DIR}/../../submodules/JUCE/**/*
-        ${CMAKE_CURRENT_SOURCE_DIR}/../../submodules/pgmf/**/*
-        PROPERTIES
-        COMPILE_FLAGS "-w"
-    )
+    if(AUTOJUST_STANDALONE)
+        set_source_files_properties(
+            ${CMAKE_CURRENT_SOURCE_DIR}/submodules/JUCE/**/*
+            ${CMAKE_CURRENT_SOURCE_DIR}/submodules/pgmf/**/*
+            PROPERTIES
+            COMPILE_FLAGS "-w"
+        )
+    else()
+        set_source_files_properties(
+            ${CMAKE_CURRENT_SOURCE_DIR}/../../submodules/JUCE/**/*
+            ${CMAKE_CURRENT_SOURCE_DIR}/../../submodules/pgmf/**/*
+            PROPERTIES
+            COMPILE_FLAGS "-w"
+        )
+    endif()
 endif()
 
-message("AutoJust: ./build/<preset>/Effects/${BaseTargetName}/${BaseTargetName}_artefacts/<Config>/Standalone/${BaseTargetName}.app")
+if(AUTOJUST_STANDALONE)
+    message("AutoJust: ./build/<preset>/${BaseTargetName}_artefacts/<Config>/Standalone/${BaseTargetName}.app")
+else()
+    message("AutoJust: ./build/<preset>/Effects/${BaseTargetName}/${BaseTargetName}_artefacts/<Config>/Standalone/${BaseTargetName}.app")
+endif()
 
 add_subdirectory(tests)

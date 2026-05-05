@@ -4,7 +4,9 @@ Master-bus adaptive Just Intonation retuner — an auto-adJusting plugin that nu
 
 The hard problem in adaptive JI — cross-instrument disagreement — disappears at the master bus, since one global grid covers the whole mix. Unresolved content (transients, breath, reverb tails, vibrato excursions) passes through untouched.
 
-See [`AutoJust_PLAN.md`](AutoJust_PLAN.md) for the design (signal flow, tuning-grid extensibility, phasing, real risks).
+## License
+
+GPLv3 — see [`LICENSE`](LICENSE). Built on JUCE (GPLv3 / commercial).
 
 ## Status
 
@@ -21,83 +23,71 @@ See [`AutoJust_PLAN.md`](AutoJust_PLAN.md) for the design (signal flow, tuning-g
 
 As of v1b, AutoJust does the headline thing: every resolved spectral peak is softly pulled toward the nearest 5-limit Just Intonation ratio relative to the moving tonal center. With `bypass=true` (default GUI state) the plugin is identity-passthrough via STFT round-trip; flip `bypass=false` and dial in `snapStrength` to engage retuning. Audio comes out delayed by 4096 samples (~93 ms at 44.1 kHz, fully compensated by every modern DAW's PDC — see latency section below).
 
-## Build
+## Build (standalone repo)
 
-From the repo root:
+```sh
+git clone --recurse-submodules https://github.com/josmithiii/AutoJust.git
+cd AutoJust
+cmake --preset release
+cmake --build build/release --parallel
+```
+
+Build outputs:
+```
+build/release/AutoJust_artefacts/Release/Standalone/AutoJust.app
+build/release/AutoJust_artefacts/Release/AU/AutoJust.component
+build/release/AutoJust_artefacts/Release/VST3/AutoJust.vst3
+```
+
+Universal binary on macOS (x86_64 + arm64).
+
+## Build (inside jos-juce-plugins research workspace)
 
 ```sh
 make ajr     # release standalone
 make ajd     # debug standalone
 make ajro    # run release standalone
-make ajdo    # run debug standalone
 make ajau    # build AU plugin (release)
 make ajaui   # build + install AU to ~/Library/Audio/Plug-Ins/Components
 ```
 
-Build outputs:
-```
-build/release/Effects/AutoJust/AutoJust_artefacts/Release/Standalone/AutoJust.app
-build/release/Effects/AutoJust/AutoJust_artefacts/Release/AU/AutoJust.component
-build/release/Effects/AutoJust/AutoJust_artefacts/Release/VST3/AutoJust.vst3
-```
-
-Universal binary (x86_64 + arm64), like the rest of jos-juce-plugins.
-
 ## Tests
 
+Build any test target then run the produced binary. Standalone repo path shown:
+
 ```sh
-# STFT round-trip (reconstruction error ≤ 6e-7 over sine/sweep/noise/impulse/DC)
 cmake --build build/release --target AutoJust_StftTest --parallel
-./build/release/Effects/AutoJust/tests/AutoJust_StftTest_artefacts/Release/AutoJust_StftTest
-
-# Peak picker + IF estimation (pure tones detected to ≤ 0.001 cents)
-cmake --build build/release --target AutoJust_PeakAnalyzerTest --parallel
-./build/release/Effects/AutoJust/tests/AutoJust_PeakAnalyzerTest_artefacts/Release/AutoJust_PeakAnalyzerTest
-
-# Tonic estimator (settles to dominant pitch class, drift cap honored)
-cmake --build build/release --target AutoJust_TonicEstimatorTest --parallel
-./build/release/Effects/AutoJust/tests/AutoJust_TonicEstimatorTest_artefacts/Release/AutoJust_TonicEstimatorTest
-
-# Retuner manual mode (single-peak L-D shift; output frequency at 0.000c)
-cmake --build build/release --target AutoJust_RetunerTest --parallel
-./build/release/Effects/AutoJust/tests/AutoJust_RetunerTest_artefacts/Release/AutoJust_RetunerTest
-
-# 5-limit Just grid math (ET interval → JI delta accuracy)
-cmake --build build/release --target AutoJust_TuningGridTest --parallel
-./build/release/Effects/AutoJust/tests/AutoJust_TuningGridTest_artefacts/Release/AutoJust_TuningGridTest
-
-# JI snap end-to-end: ET dyad in → JI dyad out (E pulled to 5/4 at 0.004c)
-cmake --build build/release --target AutoJust_RetunerJITest --parallel
-./build/release/Effects/AutoJust/tests/AutoJust_RetunerJITest_artefacts/Release/AutoJust_RetunerJITest
+./build/release/tests/AutoJust_StftTest_artefacts/Release/AutoJust_StftTest
 ```
+
+Available test targets:
+
+| Target | What it checks |
+|---|---|
+| `AutoJust_StftTest` | STFT round-trip reconstruction error ≤ 6e-7 (sine/sweep/noise/impulse/DC) |
+| `AutoJust_PeakAnalyzerTest` | Peak picking + IF estimation (pure tones to ≤ 0.001 cents) |
+| `AutoJust_TonicEstimatorTest` | Tonic histogram settles, drift cap honored |
+| `AutoJust_RetunerTest` | Manual single-peak L-D shift (output at 0.000c) |
+| `AutoJust_TuningGridTest` | 5-limit JI grid math + circular shortest path |
+| `AutoJust_RetunerJITest` | End-to-end ET dyad → JI dyad (E pulled to 5/4 at 0.004c) |
+
+Inside `jos-juce-plugins`, the artefact path is prefixed with `Effects/AutoJust/`.
 
 ## Layout
 
 ```
-Effects/AutoJust/
-  AutoJust_PLAN.md        full design doc — read this first
-  README.md               this file
-  CMakeLists.txt          JUCE plugin target (Standalone + AU + VST3)
-  Source/
-    PluginProcessor.{h,cpp}   foleys::MagicProcessor — params + analyzer wiring
-    Stft.{h,cpp}              streaming Hann² OLA, default identity
-    PeakAnalyzer.{h,cpp}      Stft subclass: peak pick + IF, exposes snapshot
-    TonicEstimator.{h,cpp}    cents-mod-octave histogram + drift-limited slew
-    TuningGrid.{h,cpp}        abstract grid + JustGrid5Limit (5-limit JI)
-    Retuner.{h,cpp}           PeakAnalyzer subclass: L-D phase rotation +
-                              JI soft attractor on all peaks
-  Resources/
-    Layouts/AutoJust.xml      PGM GUI XML
-  tests/
-    CMakeLists.txt            test target helpers
-    StftRoundTripTest.cpp     reconstruction error test
-    PeakAnalyzerTest.cpp      IF-correction accuracy test
-    TonicEstimatorTest.cpp    pitch-class settling + drift cap test
-    RetunerTest.cpp           manual-mode single-peak shift accuracy
-    TuningGridTest.cpp        5-limit grid math + circular shortest path
-    RetunerJITest.cpp         end-to-end ET dyad → JI dyad shift
-  docs/
-    patents/                  reference material
+CMakeLists.txt          JUCE plugin target (Standalone + AU + VST3)
+Source/
+  PluginProcessor.{h,cpp}   foleys::MagicProcessor — params + analyzer wiring
+  Stft.{h,cpp}              streaming Hann² OLA, default identity
+  PeakAnalyzer.{h,cpp}      Stft subclass: peak pick + IF, exposes snapshot
+  TonicEstimator.{h,cpp}    cents-mod-octave histogram + drift-limited slew
+  TuningGrid.{h,cpp}        abstract grid + JustGrid5Limit (5-limit JI)
+  Retuner.{h,cpp}           PeakAnalyzer subclass: L-D phase rotation +
+                            JI soft attractor on all peaks
+Resources/
+  Layouts/AutoJust.xml      PGM GUI XML
+tests/                      Catch2-free standalone console executables
 ```
 
 ## Latency and DAW compatibility

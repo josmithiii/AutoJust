@@ -1,6 +1,4 @@
 // AutoJust — master-bus adaptive Just Intonation retuner.
-// v0 scaffolding: identity passthrough with two stub parameters.
-// See ../AutoJust_PLAN.md for the full design.
 
 #pragma once
 
