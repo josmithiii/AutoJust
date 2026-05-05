@@ -1,0 +1,6 @@
+[submodule "submodules/JUCE"]
+	path = submodules/JUCE
+	url = https://github.com/juce-framework/JUCE.git
+[submodule "submodules/pgmf"]
+	path = submodules/pgmf
+	url = https://github.com/josmithiii/foleys-gui-magic.git
