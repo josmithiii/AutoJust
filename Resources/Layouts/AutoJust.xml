@@ -9,6 +9,14 @@
                    display="contents"/>
         <nomargin margin="0" padding="0" border="0"/>
         <group margin="5" padding="5" border="2" flex-direction="column"/>
+        <!-- Activate-when-property-true classes that collapse a panel to zero
+             size, used to swap between the main controls and the help screen.
+             min-height/min-width=0 are required because FlexBox otherwise
+             honours the children's intrinsic minimum sizes. -->
+        <hide-main flex-grow="0" active="mainHidden" max-height="0" max-width="0"
+                   min-height="0" min-width="0" margin="0" padding="0" border="0"/>
+        <hide-help flex-grow="0" active="helpHidden" max-height="0" max-width="0"
+                   min-height="0" min-width="0" margin="0" padding="0" border="0"/>
       </Classes>
       <Types>
         <Slider slider-textbox="textbox-below"/>
@@ -24,20 +32,70 @@
   </Styles>
   <View id="root" resizable="1" resize-corner="1" flex-direction="column"
         padding="8" background-color="0xff202020">
-    <Label text="AutoJust" min-height="40" max-height="48" label-font-size="28" text-color="white"/>
-    <Label text="adaptive Just Intonation"
-           min-height="22" max-height="28" label-font-size="13" text-color="0xffaaaaaa"/>
-    <TonicLabel min-height="28" max-height="36"/>
-    <View flex-direction="row" padding="6">
-      <Slider caption="Snap Strength" parameter="snapStrength" slider-type="linear-horizontal"/>
-      <Slider caption="Drift Rate"    parameter="driftRate"    slider-type="linear-horizontal"/>
-      <Slider caption="Bass Bias"     parameter="bassBias"     slider-type="linear-horizontal"/>
+
+    <!-- Main panel: collapses to zero size when mainHidden == true. -->
+    <View id="mainPanel" class="hide-main" flex-direction="column" padding="0">
+      <View flex-direction="row" padding="0" min-height="40" max-height="48">
+        <Label text="AutoJust" label-font-size="28" text-color="white"
+               justification="centred-left"/>
+        <TextButton text="Help" onClick="showHelp" max-width="80" min-height="28"
+                    max-height="36"/>
+      </View>
+      <Label text="adaptive Just Intonation"
+             min-height="22" max-height="28" label-font-size="13" text-color="0xffaaaaaa"/>
+      <TonicLabel min-height="28" max-height="36"/>
+      <View flex-direction="row" padding="6">
+        <Slider caption="Snap Strength" parameter="snapStrength" slider-type="linear-horizontal"/>
+        <Slider caption="Drift Rate"    parameter="driftRate"    slider-type="linear-horizontal"/>
+        <Slider caption="Bass Bias"     parameter="bassBias"     slider-type="linear-horizontal"/>
+      </View>
+      <View flex-direction="row" padding="6">
+        <ToggleButton caption="Tonic Lock" parameter="tonicLock" max-width="140"/>
+        <ComboBox     caption="Tonic Pitch" parameter="tonicPitch" max-width="160"/>
+        <ToggleButton caption="Test Chord" parameter="testChord" max-width="140"/>
+        <Slider       caption="Test Vol"   parameter="testChordVol"
+                      slider-type="linear-horizontal" max-width="200"/>
+        <ToggleButton caption="Bypass"     parameter="bypass"     max-width="140"/>
+      </View>
     </View>
-    <View flex-direction="row" padding="6">
-      <ToggleButton caption="Tonic Lock" parameter="tonicLock" max-width="140"/>
-      <ComboBox     caption="Tonic Pitch" parameter="tonicPitch" max-width="160"/>
-      <ToggleButton caption="Test Chord" parameter="testChord" max-width="140"/>
-      <ToggleButton caption="Bypass"     parameter="bypass"     max-width="140"/>
+
+    <!-- Help panel: collapses to zero size when helpHidden == true. -->
+    <View id="helpPanel" class="hide-help" flex-direction="column" padding="6"
+          background-color="0xff202020">
+      <View flex-direction="row" padding="0" min-height="40" max-height="48">
+        <Label text="AutoJust — Help" label-font-size="24" text-color="white"
+               justification="centred-left"/>
+        <TextButton text="Back" onClick="hideHelp" max-width="80" min-height="28"
+                    max-height="36"/>
+      </View>
+      <Label text="Tonic readout: estimated tonic shown as nearest pitch class plus signed cents offset; the raw value is cents above A4."
+             label-font-size="13" text-color="0xffdddddd" justification="top-left"
+             min-height="36"/>
+      <Label text="Snap Strength (0..1): how strongly partials are pulled toward their nearest just-intoned ratio relative to the estimated tonic. 0 = no retuning; 1 = full snap."
+             label-font-size="13" text-color="0xffdddddd" justification="top-left"
+             min-height="48"/>
+      <Label text="Drift Rate (5..200 cents/sec): maximum rate at which the estimated tonic is allowed to move. Low = rock-stable for mastering; high = follows quick key changes."
+             label-font-size="13" text-color="0xffdddddd" justification="top-left"
+             min-height="48"/>
+      <Label text="Bass Bias (0..3): exponent weighting low-frequency partials in the tonic estimate. 0 = unbiased across pitch classes; 1 = 1/f weighting; 3 = strongly favours bass."
+             label-font-size="13" text-color="0xffdddddd" justification="top-left"
+             min-height="48"/>
+      <Label text="Tonic Lock: when on, freezes the tonic at the pitch chosen in Tonic Pitch (cents-from-A4 set in 100c steps)."
+             label-font-size="13" text-color="0xffdddddd" justification="top-left"
+             min-height="36"/>
+      <Label text="Tonic Pitch: choice of locked tonic (A, Bb, ..., Ab). Has no effect unless Tonic Lock is on."
+             label-font-size="13" text-color="0xffdddddd" justification="top-left"
+             min-height="36"/>
+      <Label text="Test Chord: replaces the input with a sustained equal-tempered C major triad. Raise Snap Strength to hear the ET major third bend down to its 5/4 just ratio and the beating drop sharply."
+             label-font-size="13" text-color="0xffdddddd" justification="top-left"
+             min-height="48"/>
+      <Label text="Test Vol (0..1): linear output level for the test chord. Has no effect unless Test Chord is on."
+             label-font-size="13" text-color="0xffdddddd" justification="top-left"
+             min-height="36"/>
+      <Label text="Bypass: passes audio through unchanged. The tonic estimate continues to update so the readout stays live."
+             label-font-size="13" text-color="0xffdddddd" justification="top-left"
+             min-height="36"/>
     </View>
+
   </View>
 </magic>

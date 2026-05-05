@@ -1,7 +1,8 @@
 # AutoJust — convenience wrappers around CMake.
 #
 # Quick reference:
-#   make            -> release build (standalone + AU + VST3)
+#   make            -> show help (default)
+#   make all        -> release build (standalone + AU + VST3)
 #   make run        -> open the Standalone app
 #   make debug      -> debug build (standalone)
 #   make tests      -> build and run all unit tests
@@ -22,6 +23,29 @@ VST3_REL   = ./build/release/AutoJust_artefacts/Release/VST3/AutoJust.vst3
 AU_DEST    = $(HOME)/Library/Audio/Plug-Ins/Components
 VST3_DEST  = $(HOME)/Library/Audio/Plug-Ins/VST3
 
+# ---- Help (default target) -----------------------------------------------
+.PHONY: help
+help:
+	@echo "AutoJust — convenience wrappers around CMake."
+	@echo ""
+	@echo "Targets:"
+	@echo "  make help       Show this message (default)"
+	@echo "  make all        Release build (standalone + AU + VST3)"
+	@echo "  make release    Same as 'all'"
+	@echo "  make standalone Release standalone only"
+	@echo "  make au         Release AU only"
+	@echo "  make vst3       Release VST3 only"
+	@echo "  make debug      Debug build (standalone)"
+	@echo "  make run        Open the release Standalone app"
+	@echo "  make run-debug  Open the debug Standalone app"
+	@echo "  make install    Install AU + VST3 into ~/Library/Audio/Plug-Ins/"
+	@echo "  make install-au Install AU only"
+	@echo "  make install-vst3 Install VST3 only"
+	@echo "  make tests      Build and run all unit tests"
+	@echo "  make submodules git submodule update --init --recursive"
+	@echo "  make clean      Remove build/ entirely"
+	@echo "  make distclean  Same as clean"
+
 # ---- Configure -----------------------------------------------------------
 .PHONY: configure-release configure-debug
 configure-release:
@@ -30,7 +54,7 @@ configure-release:
 configure-debug:
 	cmake --preset debug
 
-# ---- Build (default = release standalone + AU + VST3) --------------------
+# ---- Build ---------------------------------------------------------------
 .PHONY: all release standalone au vst3 debug
 all: release
 

@@ -39,15 +39,54 @@ private:
 
 AutoJustAudioProcessor::AutoJustAudioProcessor()
 {
-    bypassParam      = treeState.getRawParameterValue ("bypass");
-    snapStrength     = treeState.getRawParameterValue ("snapStrength");
-    testChordParam   = treeState.getRawParameterValue ("testChord");
-    tonicLockParam   = treeState.getRawParameterValue ("tonicLock");
-    tonicPitchParam  = treeState.getRawParameterValue ("tonicPitch");
-    driftRateParam   = treeState.getRawParameterValue ("driftRate");
-    bassBiasParam    = treeState.getRawParameterValue ("bassBias");
+    bypassParam       = treeState.getRawParameterValue ("bypass");
+    snapStrength      = treeState.getRawParameterValue ("snapStrength");
+    testChordParam    = treeState.getRawParameterValue ("testChord");
+    testChordVolParam = treeState.getRawParameterValue ("testChordVol");
+    tonicLockParam    = treeState.getRawParameterValue ("tonicLock");
+    tonicPitchParam   = treeState.getRawParameterValue ("tonicPitch");
+    driftRateParam    = treeState.getRawParameterValue ("driftRate");
+    bassBiasParam     = treeState.getRawParameterValue ("bassBias");
 
     tonicLabelValue.setValue (juce::String ("Tonic: —"));
+
+    // Help-panel toggle: two MagicState properties drive `active=...` on the
+    // `hide-main` / `hide-help` style classes (true ⇒ class is active ⇒ panel
+    // collapses to zero size). Triggers wired to the Help / Back buttons flip
+    // both at once so exactly one panel is showing.
+    //
+    // After toggling the properties we call `builder.updateComponents()` —
+    // pgmf's local patch in foleys_GuiItem::updateInternal() short-circuits
+    // after the first call (didUpdateInternal flag), so live class-`active`
+    // changes don't relayout. updateComponents() rebuilds the GuiItem tree
+    // fresh, which is the same thing the editor's File→Refresh menu does.
+    magicState.getPropertyAsValue ("mainHidden").setValue (false);
+    magicState.getPropertyAsValue ("helpHidden").setValue (true);
+    // Deferred so the rebuild does not run while we're still inside the
+    // TextButton's onClick callback — updateComponents() destroys the whole
+    // GuiItem tree (the button included), which would be a use-after-free.
+    auto refreshGui = [this]
+    {
+        juce::MessageManager::callAsync ([this]
+        {
+            if (auto* magicEditor = dynamic_cast<foleys::MagicPluginEditor*> (getActiveEditor()))
+                magicEditor->getGUIBuilder().updateComponents();
+        });
+    };
+    magicState.addTrigger ("showHelp", [this, refreshGui]
+    {
+        std::printf ("AutoJust: showHelp trigger fired\n"); std::fflush (stdout);
+        magicState.getPropertyAsValue ("helpHidden").setValue (false);
+        magicState.getPropertyAsValue ("mainHidden").setValue (true);
+        refreshGui();
+    });
+    magicState.addTrigger ("hideHelp", [this, refreshGui]
+    {
+        std::printf ("AutoJust: hideHelp trigger fired\n"); std::fflush (stdout);
+        magicState.getPropertyAsValue ("helpHidden").setValue (true);
+        magicState.getPropertyAsValue ("mainHidden").setValue (false);
+        refreshGui();
+    });
 
     magicState.setGuiValueTree (BinaryData::AutoJust_xml, BinaryData::AutoJust_xmlSize);
 
@@ -98,6 +137,12 @@ AutoJustAudioProcessor::createParameterLayout()
 
     layout.add (std::make_unique<juce::AudioParameterBool> (
         juce::ParameterID { "testChord", 1 }, "Test Chord", false));
+
+    // Test-chord output level (linear amplitude). 0 = silent, 1 = full level
+    // (the per-voice amps in processBlock; sums to roughly 0.7 peak).
+    layout.add (std::make_unique<juce::AudioParameterFloat> (
+        juce::ParameterID { "testChordVol", 1 }, "Test Chord Vol",
+        juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f), 1.0f));
 
     layout.add (std::make_unique<juce::AudioParameterBool> (
         juce::ParameterID { "tonicLock", 1 }, "Tonic Lock", false));
@@ -159,6 +204,7 @@ void AutoJustAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     {
         constexpr double freqs[3]    = { 261.6256, 329.6276, 391.9954 }; // C4, E4 (ET), G4 (ET)
         constexpr float  voiceAmps[3] = { 0.32f,    0.18f,    0.18f    }; // C dominant
+        const float gain  = (testChordVolParam != nullptr) ? testChordVolParam->load() : 1.0f;
         const double sr = getSampleRate();
         const int    n  = buffer.getNumSamples();
         const double twoPi = juce::MathConstants<double>::twoPi;
@@ -173,7 +219,7 @@ void AutoJustAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
                 testPhase[v] += twoPi * freqs[v] / sr;
                 if (testPhase[v] > twoPi) testPhase[v] -= twoPi;
             }
-            w0[i] = s;
+            w0[i] = gain * s;
         }
         for (int ch = 1; ch < totalOut; ++ch)
             std::copy (w0, w0 + n, buffer.getWritePointer (ch));
