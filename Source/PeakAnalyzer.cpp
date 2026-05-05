@@ -92,7 +92,10 @@ std::vector<ResolvedPeak> PeakAnalyzer::detectAndCorrectPeaks (float* data, int 
     std::nth_element (sorted.begin(), sorted.begin() + sorted.size() / 2, sorted.end());
     const float median = sorted[sorted.size() / 2];
     const float ratio  = std::pow (10.0f, peakThresholdDb / 20.0f);
-    const float thr    = std::max (median * ratio, absoluteFloor);
+    const float maxMag = *std::max_element (mag.begin(), mag.end());
+    const float thr    = std::max ({ median * ratio,
+                                     absoluteFloor,
+                                     relativeFloorFraction * maxMag });
 
     std::vector<ResolvedPeak> peaks;
     peaks.reserve ((size_t) maxPeaks);

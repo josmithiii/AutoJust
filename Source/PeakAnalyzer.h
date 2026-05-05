@@ -59,6 +59,11 @@ public:
     void setPeakThresholdDb (float db) noexcept       { peakThresholdDb = db; }
     /** Hard floor — peaks with magnitude below this are ignored (default 1e-4). */
     void setAbsoluteFloor   (float v)  noexcept       { absoluteFloor = v; }
+    /** Per-frame relative floor: peaks below this fraction of the loudest
+        bin in the frame are rejected. Kills Hann-sidelobe-sum spurious
+        local maxima from loud tonal content (sidelobes ≈ –32 dB ⇒ ~2.5%);
+        default 0.05 leaves ~6 dB of headroom above that. */
+    void setRelativeFloorFraction (float f) noexcept  { relativeFloorFraction = f; }
     /** Cap on the number of peaks reported per frame. */
     void setMaxPeaks        (int n)    noexcept       { maxPeaks = n; }
 
@@ -82,8 +87,9 @@ protected:
 
 private:
     double sampleRate     = 44100.0;
-    float  peakThresholdDb = 12.0f;
-    float  absoluteFloor   = 1.0e-4f;
+    float  peakThresholdDb       = 12.0f;
+    float  absoluteFloor         = 1.0e-4f;
+    float  relativeFloorFraction = 0.05f;
     int    maxPeaks        = 32;
     int    reportChannel   = 0;
 
