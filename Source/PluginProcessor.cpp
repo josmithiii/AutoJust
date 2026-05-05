@@ -87,6 +87,13 @@ AutoJustAudioProcessor::AutoJustAudioProcessor()
         magicState.getPropertyAsValue ("mainHidden").setValue (false);
         refreshGui();
     });
+    magicState.addTrigger ("resetDefaults", [this]
+    {
+        std::printf ("AutoJust: resetDefaults trigger fired\n"); std::fflush (stdout);
+        for (auto* p : getParameters())
+            if (auto* rp = dynamic_cast<juce::RangedAudioParameter*> (p))
+                rp->setValueNotifyingHost (rp->getDefaultValue());
+    });
 
     magicState.setGuiValueTree (BinaryData::AutoJust_xml, BinaryData::AutoJust_xmlSize);
 

@@ -56,6 +56,8 @@
         <Slider       caption="Test Vol"   parameter="testChordVol"
                       slider-type="linear-horizontal" max-width="200"/>
         <ToggleButton caption="Bypass"     parameter="bypass"     max-width="140"/>
+        <TextButton text="Defaults" onClick="resetDefaults" max-width="120"
+                    min-height="28" max-height="36"/>
       </View>
     </View>
 
