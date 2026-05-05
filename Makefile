@@ -1,13 +1,10 @@
 # AutoJust — convenience wrappers around CMake.
 #
-# Quick reference:
-#   make            -> show help (default)
-#   make all        -> release build (standalone + AU + VST3)
-#   make run        -> open the Standalone app
-#   make debug      -> debug build (standalone)
-#   make tests      -> build and run all unit tests
-#   make install    -> copy AU + VST3 into ~/Library/Audio/Plug-Ins/
-#   make clean      -> remove build/ entirely
+# Naming convention (mirrors the jos-juce-plugins Makefile):
+#   [aj][type][modifier]
+#     type:     d (debug), r (release)
+#     modifier: au (AU plugin), aui (AU build + install), o (open/run)
+# Long-form aliases (debug, release, run, ...) also work.
 #
 # Underlying invocations are plain `cmake --preset {release,debug}` followed
 # by `cmake --build build/{release,debug} --target ... --parallel`.
@@ -26,25 +23,38 @@ VST3_DEST  = $(HOME)/Library/Audio/Plug-Ins/VST3
 # ---- Help (default target) -----------------------------------------------
 .PHONY: help
 help:
-	@echo "AutoJust — convenience wrappers around CMake."
+	@echo "AutoJust Makefile Targets"
+	@echo "========================="
 	@echo ""
-	@echo "Targets:"
-	@echo "  make help       Show this message (default)"
-	@echo "  make all        Release build (standalone + AU + VST3)"
-	@echo "  make release    Same as 'all'"
-	@echo "  make standalone Release standalone only"
-	@echo "  make au         Release AU only"
-	@echo "  make vst3       Release VST3 only"
-	@echo "  make debug      Debug build (standalone)"
-	@echo "  make run        Open the release Standalone app"
-	@echo "  make run-debug  Open the debug Standalone app"
-	@echo "  make install    Install AU + VST3 into ~/Library/Audio/Plug-Ins/"
-	@echo "  make install-au Install AU only"
-	@echo "  make install-vst3 Install VST3 only"
-	@echo "  make tests      Build and run all unit tests"
-	@echo "  make submodules git submodule update --init --recursive"
-	@echo "  make clean      Remove build/ entirely"
-	@echo "  make distclean  Same as clean"
+	@echo "Naming convention: [aj][type][modifier]"
+	@echo "  Types: r (release), d (debug)"
+	@echo "  Modifiers: au (AU plugin), aui (AU build + install), o (open/run)"
+	@echo ""
+	@echo "AUTOJUST BUILDS:"
+	@echo "  ajr            - Release build (standalone)"
+	@echo "  ajd            - Debug build (standalone)"
+	@echo "  ajau           - AU plugin build (release)"
+	@echo "  ajaui          - AU plugin build and install"
+	@echo "  ajvst3         - VST3 plugin build (release)"
+	@echo "  ajvst3i        - VST3 plugin build and install"
+	@echo "  all            - Release build (standalone + AU + VST3)"
+	@echo ""
+	@echo "AUTOJUST RUN:"
+	@echo "  ajro           - Open/run release standalone (kills running first)"
+	@echo "  ajdo           - Open/run debug standalone (kills running first)"
+	@echo ""
+	@echo "INSTALL:"
+	@echo "  install        - Install AU + VST3 into ~/Library/Audio/Plug-Ins/"
+	@echo "  install-au     - Install AU only"
+	@echo "  install-vst3   - Install VST3 only"
+	@echo ""
+	@echo "TESTS / HOUSEKEEPING:"
+	@echo "  tests          - Build and run all unit tests"
+	@echo "  submodules     - git submodule update --init --recursive"
+	@echo "  clean          - Remove build/ entirely"
+	@echo ""
+	@echo "Long-form aliases also work: release, debug, standalone, au, vst3,"
+	@echo "run, run-debug."
 
 # ---- Configure -----------------------------------------------------------
 .PHONY: configure-release configure-debug
@@ -55,7 +65,7 @@ configure-debug:
 	cmake --preset debug
 
 # ---- Build ---------------------------------------------------------------
-.PHONY: all release standalone au vst3 debug
+.PHONY: all release standalone au vst3 debug ajr ajd ajau ajaui ajvst3 ajvst3i
 all: release
 
 release: configure-release
@@ -73,15 +83,28 @@ vst3: configure-release
 debug: configure-debug
 	cmake --build build/debug --target AutoJust_Standalone --parallel
 
+# Short-prefix aliases (mirror jos-juce-plugins Makefile naming)
+ajr: standalone
+ajd: debug
+ajau: au
+ajaui: install-au
+ajvst3: vst3
+ajvst3i: install-vst3
+
 # ---- Run -----------------------------------------------------------------
-.PHONY: run run-debug
+.PHONY: run run-debug ajro ajdo
 run: standalone
 	@test -f "$(BIN_REL)" || { echo "release standalone not built"; exit 1; }
+	-@killall AutoJust 2>/dev/null; true
 	open $(APP_REL)
 
 run-debug: debug
 	@test -f "$(BIN_DBG)" || { echo "debug standalone not built"; exit 1; }
+	-@killall AutoJust 2>/dev/null; true
 	open $(APP_DBG)
+
+ajro: run
+ajdo: run-debug
 
 # ---- Install plugins -----------------------------------------------------
 .PHONY: install install-au install-vst3
